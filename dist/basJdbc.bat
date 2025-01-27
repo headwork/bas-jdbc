@@ -9,7 +9,7 @@ set PROFILE=prod
 set LOG_FILE=app.log
 set JAVA_PATH=D:\ProgramFile\java\jdk-17\bin
 set SHUTDOWN_URL=http://localhost:%PORT%/actuator/shutdown
-set CP=lib/*
+set CP=./lib/*
 
 set RUN_TAG=start
 if not ""%1""=="""" (

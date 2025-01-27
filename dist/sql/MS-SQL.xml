@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <template id="column_info">
+    <![CDATA[
+        WITH WTB_LIST AS (
+            SELECT *
+              FROM (
+                    SELECT T.NAME AS table_name, T.id
+                         , COUNT(1) OVER( PARTITION BY COL.NAME) AS col_cnt
+                         , ROW_NUMBER() OVER( PARTITION BY COL.NAME ORDER BY ISNULL(CMT.VALUE, '') DESC, ISNULL(TCMT.VALUE, '') DESC, T.NAME) AS rank01
+                         , ISNULL(TCMT.VALUE, '') AS table_comment
+                         , COL.NAME AS column_name
+                         , CMT.VALUE AS colum_comment
+                         , A.data_type
+                         , CASE WHEN A.CHARACTER_MAXIMUM_LENGTH = -1 THEN 'MAX'
+                                ELSE ISNULL(CAST(A.CHARACTER_MAXIMUM_LENGTH AS VARCHAR), CAST(A.NUMERIC_PRECISION AS VARCHAR)) END AS len
+                         , A.NUMERIC_SCALE scale
+                         , CASE WHEN A.IS_NULLABLE = 'YES' THEN '' ELSE 'N' END is_nullable
+                         , CASE WHEN A.COLUMN_DEFAULT IS NOT NULL THEN SUBSTRING(A.COLUMN_DEFAULT, 2, LEN(A.COLUMN_DEFAULT) -2) END AS column_default
+                      FROM sysobjects T
+                     INNER JOIN sys.columns COL
+                        ON T.id = COL.object_id
+                      LEFT JOIN INFORMATION_SCHEMA.COLUMNS A
+                        ON A.TABLE_NAME = T.name
+                       AND A.COLUMN_NAME = COL.name
+                      LEFT JOIN sys.extended_properties TCMT  
+                        ON TCMT.major_id = T.id AND TCMT.minor_id = 0
+                       AND TCMT.name = 'MS_Description'
+                      LEFT JOIN  sys.extended_properties CMT  
+                        ON CMT.major_id = COL.object_id AND CMT.minor_id = COL.column_id
+                     WHERE T.xtype = 'U'
+                       AND T.NAME IN (${tables})
+                       AND COL.NAME IN (${cols})
+                   ) T
+             WHERE RANK01 = 1
+        )
+        , WTB_LIST2 AS (
+            SELECT *
+              FROM (
+            SELECT T.NAME AS TABLE_NAME, T.id
+                 , COUNT(1) OVER( PARTITION BY COL.NAME) AS COL_CNT
+                 , ROW_NUMBER() OVER( PARTITION BY COL.NAME ORDER BY ISNULL(CMT.VALUE, '') DESC, ISNULL(TCMT.VALUE, '') DESC, T.NAME) AS RANK01
+                 , ISNULL(TCMT.VALUE, '') AS TABLE_COMMENT
+                 , COL.NAME AS COLUMN_NAME
+                 , CMT.VALUE AS COLUM_COMMENT
+                 , A.DATA_TYPE
+                 , CASE WHEN A.CHARACTER_MAXIMUM_LENGTH = -1 THEN 'MAX'
+                        ELSE ISNULL(CAST(A.CHARACTER_MAXIMUM_LENGTH AS VARCHAR), CAST(A.NUMERIC_PRECISION AS VARCHAR)) END AS LEN
+                 , A.NUMERIC_SCALE SCALE
+                 , CASE WHEN A.IS_NULLABLE = 'YES' THEN '' ELSE 'N' END IS_NULLABLE
+                 , CASE WHEN A.COLUMN_DEFAULT IS NOT NULL THEN SUBSTRING(A.COLUMN_DEFAULT, 2, LEN(A.COLUMN_DEFAULT) -2) END AS COLUMN_DEFAULT
+              FROM sysobjects T
+             INNER JOIN sys.columns COL
+                ON T.id = COL.object_id
+              LEFT JOIN INFORMATION_SCHEMA.COLUMNS A
+                ON A.TABLE_NAME = T.name
+               AND A.COLUMN_NAME = COL.name
+              LEFT JOIN sys.extended_properties TCMT  
+                ON TCMT.major_id = T.id AND TCMT.minor_id = 0
+               AND TCMT.name = 'MS_Description'
+              LEFT JOIN  sys.extended_properties CMT  
+                ON CMT.major_id = COL.object_id AND CMT.minor_id = COL.column_id 
+             WHERE T.xtype = 'U'
+               AND COL.NAME IN (${cols})
+               AND COL.NAME NOT IN(SELECT COLUM_COMMENT FROM WTB_LIST)
+               ) T
+             WHERE RANK01 = 1
+        )
+<#if (pkTag == 'Y')>
+        SELECT T.*
+             , CASE WHEN P.COLUMN_NAME IS NULL THEN '' ELSE 'Y' END pk_yn
+          FROM (
+            SELECT * FROM WTB_LIST
+            UNION ALL
+            SELECT * FROM WTB_LIST2
+               ) T
+          LEFT JOIN sys.indexes ix ON IX.object_id = T.id AND IX.is_primary_key = 1
+          LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS P
+            ON IX.NAME = P.CONSTRAINT_NAME
+           AND P.TABLE_NAME = T.TABLE_NAME AND P.COLUMN_NAME = T.COLUMN_NAME
+<#else>
+        SELECT * FROM WTB_LIST
+         UNION ALL
+        SELECT * FROM WTB_LIST2
+</#if>
+    ]]>
+    </template>
+    <template id="if_template">
+        <![CDATA[
+        <#if (tag == 'Y')>
+            Y 영역
+        <#elseif (tag == 'N')>
+            N 영역
+        <#else>
+            기타 영역
+        </#if>
+        
+        param01 = '${param01}'
+        
+        ]]>
+    </template>
+    <template id="other_template">
+        이것은 다른 템플릿입니다. $name 님, 안녕하세요.
+    </template>
+</templates>

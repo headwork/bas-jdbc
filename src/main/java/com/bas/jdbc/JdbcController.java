@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,16 +17,23 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 @Controller
+@CrossOrigin(origins = "*")
 public class JdbcController {
     private static ConnectionTool ct;
     
     @RequestMapping("/dbConnect")
     public @ResponseBody ResponseEntity<String> dbsettingConnect(@RequestParam Map<String, String> param) {
+        String dbName = param.get("dbName");
         if(ct == null) {
             ct = new ConnectionTool();
-            ct.setConnection(param.get("dbName"), param);
+            ct.setConnection(dbName, param);
+        }else {
+            if(!ct.isConnect(dbName)) {
+                ct.setConnection(dbName, param);
+            }
         }
-        List<Map<String, Object>> list = ct.selectExec(param.get("dbName"), param.get("sql"));
+        SqlQuery sq = ct.getSqlQuery(dbName);
+        List<Map<String, Object>> list = sq.selectExec(param.get("sql"));
         Map<String, Object> resultMap = resultMap(true);
         return toResponseEntity(resultMap);
     }
@@ -33,8 +41,14 @@ public class JdbcController {
     @RequestMapping("/sqlScriptExec")
     public @ResponseBody ResponseEntity<String> sqlScriptExec(@RequestParam Map<String, String> param) {
         getCt();
-        Map<String, Object> resultMap = resultMap(true);
-        Map<String, Object> result = ct.selectExecInfo(param.get("dbName"), param.get("sql"));
+        String dbName = param.get("dbName");
+        boolean isConnect = ct.isConnect(dbName);
+        Map<String, Object> resultMap = resultMap(isConnect);
+        if(!isConnect) {
+            resultMap.put("resultMsg", "접속된 Connection 정보가 없습니다.");
+        }
+        SqlQuery sq = ct.getSqlQuery(dbName);
+        Map<String, Object> result = sq.selectExecInfo(param.get("sql"));
         resultMap.put("list", result.get("list"));
         resultMap.put("columnInfo", result.get("columnInfo"));
         return toResponseEntity(resultMap);
