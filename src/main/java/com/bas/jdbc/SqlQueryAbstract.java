@@ -109,6 +109,57 @@ public abstract class SqlQueryAbstract implements SqlQuery {
 
         return result;
     }
+
+    @Override
+    public Map<String, Object> tableInfo(Map<String, Object> params) {
+        params.put("schema", Util.convertQueryParam((String)params.get("database")));
+        params.put("table", Util.convertQueryParam((String)params.get("table")));
+        params.put("table_name", Util.convertQueryParam((String)params.get("table1")));
+        Map<String, Object> result = new HashMap<String,Object>();
+        result.put("list", selectList("table_info", params));
+        result.put("constraint_info", selectList("constraint_info", params));
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> tableList(Map<String, Object> params) {
+        params.put("schema", Util.convertQueryParam((String)params.get("database")));
+        params.put("table", Util.convertQueryParam((String)params.get("table")));
+        Map<String, Object> result = new HashMap<String,Object>();
+        result.put("list", selectList("table_list", params));
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> databaseList() {
+        Map<String, Object> result = new HashMap<String,Object>();
+        result.put("list", selectList("schema_list", new HashMap<String,Object>()));
+        return result;
+    }
+
+    public List<Map<String, Object>> selectList(String sqlId, Map<String, Object> params) {
+        Connection con = null;
+        Statement ctmt = null;
+        ResultSet rs = null;
+        List<Map<String, Object>> list = null;
+        try {
+            con = cv.getConnection();
+            String template = templateQeury(sqlId);
+            String sql = freeMarkerQeury(template, params);
+            System.out.println("sql = " + sql);
+            ctmt = con.createStatement();
+            rs = ctmt.executeQuery(sql);
+            list = convertListMap(rs, 1000);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        } finally {
+            try {if(ctmt != null) ctmt.close();} catch (Exception e) {}
+            try {if(con != null) con.close();} catch (Exception e) {e.printStackTrace();}
+        }
+
+        return list;
+    }
     
     public List<Map<String, Object>> objectInfo(Connection con, List<String> tableList, List<String> columnList) throws Exception {
         return objectInfo(con, tableList, columnList, false); 
@@ -175,6 +226,13 @@ public abstract class SqlQueryAbstract implements SqlQuery {
         return list;
     }
     
+    /**
+     * CaseInsensitiveKeyMap 사용 (key값 대소문자 무시)
+     * @param rs
+     * @param max
+     * @return
+     * @throws Exception
+     */
     public static List<Map<String, Object>> convertListMap2(ResultSet rs, int max) throws Exception{
         List<Map<String, Object>> list = new ArrayList<Map<String,Object>>();
         if(rs == null) return list;

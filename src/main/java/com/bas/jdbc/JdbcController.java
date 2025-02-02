@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -50,6 +51,33 @@ public class JdbcController {
         SqlQuery sq = ct.getSqlQuery(dbName);
         Map<String, Object> result = sq.selectExecInfo(param.get("sql"));
         resultMap.put("list", result.get("list"));
+        resultMap.put("columnInfo", result.get("columnInfo"));
+        return toResponseEntity(resultMap);
+    }
+
+    @RequestMapping("/database/{page}")
+    public @ResponseBody ResponseEntity<String> tableList(@PathVariable String page, @RequestParam Map<String, Object> param) {
+        getCt();
+        String dbName = (String)param.get("dbName");
+        boolean isConnect = ct.isConnect(dbName);
+        Map<String, Object> resultMap = resultMap(isConnect);
+        if(!isConnect) {
+            resultMap.put("resultMsg", "접속된 Connection 정보가 없습니다.");
+        }
+        SqlQuery sq = ct.getSqlQuery(dbName);
+        
+        Map<String, Object> result = null;
+        if("tableList".equals(page)) {
+            result = sq.tableList(param);
+            resultMap.put("list", result.get("list"));
+        }else if("tableInfo".equals(page)) {
+            result = sq.tableInfo(param);
+            resultMap.put("list", result.get("list"));
+        }else if("databaseList".equals(page)) {
+            result = sq.databaseList();
+            resultMap.put("list", result.get("list"));
+        }
+
         resultMap.put("columnInfo", result.get("columnInfo"));
         return toResponseEntity(resultMap);
     }
