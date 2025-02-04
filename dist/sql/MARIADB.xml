@@ -20,7 +20,7 @@
          , T.TABLE_COMMENT
          , C.COLUMN_NAME
          , C.COLUMN_COMMENT 
-         , C.DATA_TYPE DAT_TYP
+         , C.DATA_TYPE AS DAT_TYP
          , C.CHARACTER_MAXIMUM_LENGTH DAT_LEN
          , C.NUMERIC_SCALE DEC_LEN  
          , case when C.IS_NULLABLE = 'YES' then 'Y' else 'N' end IS_NULLABLE
@@ -28,6 +28,7 @@
          , C.COLUMN_TYPE
          , C.COLUMN_KEY
          , C.ORDINAL_POSITION
+         , C.EXTRA
       FROM information_schema.tables t
      inner join information_schema.columns C
         on T.TABLE_SCHEMA  = C.TABLE_SCHEMA 

@@ -217,7 +217,7 @@ public abstract class SqlQueryAbstract implements SqlQuery {
         while(rs.next()) {
             Map<String,Object> row = new LinkedHashMap<String, Object>();
             for(int i=1; i<=columns; ++i) {
-                row.put(md.getColumnName(i), rs.getObject(i));
+                row.put(md.getColumnLabel(i), rs.getObject(i));
             }
             list.add(row);
             if(rows >= max) break;

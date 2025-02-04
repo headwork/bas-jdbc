@@ -69,13 +69,13 @@ public class JdbcController {
         Map<String, Object> result = null;
         if("tableList".equals(page)) {
             result = sq.tableList(param);
-            resultMap.put("list", result.get("list"));
         }else if("tableInfo".equals(page)) {
             result = sq.tableInfo(param);
-            resultMap.put("list", result.get("list"));
         }else if("databaseList".equals(page)) {
             result = sq.databaseList();
-            resultMap.put("list", result.get("list"));
+        }
+        if(result != null) {
+            resultMap.putAll(result);
         }
 
         resultMap.put("columnInfo", result.get("columnInfo"));
