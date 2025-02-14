@@ -2,14 +2,17 @@
 <templates>
     <template id="constraint_info">
     <![CDATA[
-    SELECT TABLE_NAME, CONSTRAINT_NAME, COLUMN_NAME, ORDINAL_POSITION
-      FROM information_schema.KEY_COLUMN_USAGE K
+    SELECT K.TABLE_NAME, K.CONSTRAINT_NAME, C.CONSTRAINT_TYPE
+         , K.COLUMN_NAME, K.ORDINAL_POSITION
+      FROM information_schema.table_constraints C
+     INNER JOIN information_schema.KEY_COLUMN_USAGE K
+        ON C.table_schema = K.table_schema AND C.TABLE_NAME = K.TABLE_NAME
      WHERE 1=1
 <#if (schema != '')>
-       AND K.table_schema='${schema}'
+       AND C.table_schema='${schema}'
 </#if>
 <#if (table_name != '')>
-       AND K.TABLE_NAME='${table_name}'
+       AND C.TABLE_NAME='${table_name}'
 </#if>
      ORDER BY K.CONSTRAINT_NAME, ORDINAL_POSITION
     ]]>
