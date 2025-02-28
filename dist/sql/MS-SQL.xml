@@ -1,5 +1,110 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates>
+    <template id="constraint_info">
+    <![CDATA[
+    SELECT P.TABLE_NAME TABLE_NAME
+         , P.CONSTRAINT_NAME
+         , CASE WHEN IX.is_primary_key = 1 
+                THEN 'PRIMARY KEY' 
+                WHEN IX.is_unique_constraint = 1 
+                THEN 'UNIQUE'
+                ELSE 'XX' END CONSTRAINT_TYPE
+         , P.COLUMN_NAME
+         , P.ORDINAL_POSITION
+      FROM ${schema2}INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS P
+     INNER JOIN ${schema2}sys.indexes ix
+        ON IX.NAME = P.CONSTRAINT_NAME
+     WHERE 1=1
+<#if (schema != '')>
+       AND P.CONSTRAINT_CATALOG='${schema}'
+</#if>
+<#if (table_name != '')>
+       AND P.TABLE_NAME='${table_name}'
+</#if>
+     ORDER BY P.CONSTRAINT_NAME, P.ORDINAL_POSITION
+    ]]>
+    </template>
+    <template id="table_info">
+    <![CDATA[
+    select T.name AS TABLE_NAME
+	     , ISNULL(TCMT.VALUE, '') AS TABLE_COMMENT
+	     , COL.NAME AS COLUMN_NAME
+	     , CMT.VALUE AS COLUM_COMMENT
+	     , A.DATA_TYPE DAT_TYP
+	     , ISNULL(CAST(A.CHARACTER_MAXIMUM_LENGTH AS VARCHAR), CAST(A.NUMERIC_PRECISION AS VARCHAR)) DAT_LEN
+	     , A.NUMERIC_SCALE DEC_LEN
+	     , CASE WHEN A.IS_NULLABLE = 'YES' THEN '' ELSE 'N' END IS_NULLABLE
+	     , CASE WHEN A.COLUMN_DEFAULT IS NOT NULL THEN SUBSTRING(A.COLUMN_DEFAULT, 2, LEN(A.COLUMN_DEFAULT) -2) END AS COLUMN_DEFAULT
+	     , CASE WHEN CHARINDEX('char', A.DATA_TYPE) > 0 
+	            THEN CASE WHEN A.CHARACTER_MAXIMUM_LENGTH = -1 
+	                      THEN CONCAT(A.DATA_TYPE, '(max)') 
+	                      ELSE CONCAT(A.DATA_TYPE, '(', A.CHARACTER_MAXIMUM_LENGTH, ')') END
+	            WHEN A.DATA_TYPE IN ('numeric')
+	            THEN CASE WHEN A.NUMERIC_SCALE IS NOT NULL
+	                      THEN CONCAT(A.DATA_TYPE, '(', A.NUMERIC_PRECISION , ',', A.NUMERIC_SCALE ,')')
+	                      ELSE CONCAT(A.DATA_TYPE, '(', A.NUMERIC_PRECISION , ',' ,')') END
+	            ELSE A.DATA_TYPE END AS COLUMN_TYPE
+	     , CASE WHEN P.COLUMN_NAME IS NULL THEN '' ELSE 'PRI' END COLUMN_KEY
+	     , A.ORDINAL_POSITION ORDINAL_POSITION
+	     , '' EXTRA
+	     , COL.COLLATION_NAME
+	  from ${schema2}sys.objects T
+	 inner join ${schema2}sys.columns COL
+	    on T.object_id = COL.object_id
+	  left join ${schema2}INFORMATION_SCHEMA.COLUMNS A
+	    on A.TABLE_NAME = T.name
+	   AND A.COLUMN_NAME = COL.name
+	  left join ${schema2}sys.extended_properties TCMT  
+	    on TCMT.major_id = T.object_id and TCMT.minor_id = 0
+	   AND TCMT.name = 'MS_Description'
+	  left join ${schema2}sys.extended_properties CMT  
+	    on CMT.major_id = COL.object_id and CMT.minor_id = COL.column_id 
+	  LEFT JOIN ${schema2}sys.indexes ix ON IX.object_id = T.object_id AND IX.is_primary_key = 1
+	  LEFT JOIN ${schema2}INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS P
+	    ON IX.NAME = P.CONSTRAINT_NAME
+	   AND P.TABLE_NAME = A.TABLE_NAME AND P.COLUMN_NAME = A.COLUMN_NAME
+     WHERE T.type = 'U'
+<#if (table_name != '')>
+       AND T.name='${table_name}'
+</#if>
+     ORDER BY A.ORDINAL_POSITION
+    ]]>
+    </template>
+    <template id="table_list">
+    <![CDATA[
+	SELECT TB.NAME TABLE_NAME
+	     , ISNULL(TCMT.VALUE, '') AS TABLE_COMMENT
+	     , TB.TYPE_DESC TABLE_TYPE
+	     , '' ENGINE
+	     , P.ROWS TABLE_ROWS
+	  FROM INFORMATION_SCHEMA.TABLES TM
+     INNER JOIN ${schema2}sys.tables TB
+        ON TM.TABLE_NAME = TB.NAME
+	  LEFT JOIN ${schema2}sys.extended_properties TCMT
+	    ON TCMT.major_id = TB.object_id and TCMT.minor_id = 0
+	   AND TCMT.name = 'MS_Description'
+	 INNER JOIN ${schema2}sys.partitions AS p
+	    ON TB.object_id = p.object_id
+	   AND p.index_id IN (0, 1)
+	 WHERE 1=1
+    <#if (schema != '')>
+       AND DB.NAME = '${schema}'
+    </#if>
+<#if (table != '')>
+       AND TB.NAME LIKE CONCAT('%','${table}', '%')
+</#if>
+    ]]>
+    </template>
+    <template id="schema_list">
+    <![CDATA[
+    SELECT DB.NAME SCHEMA_NAME
+	     , '' DEFAULT_CHARACTER_SET_NAME
+	     , DB.COLLATION_NAME AS DEFAULT_COLLATION_NAME
+	     , CASE WHEN DB.NAME = DB_NAME() THEN 'Y' ELSE 'N' END CUR_DB
+	  FROM sys.databases DB
+	 WHERE DB.NAME NOT IN ('master','tempdb', 'model', 'msdb')
+    ]]>
+    </template>
     <template id="column_info">
     <![CDATA[
         WITH WTB_LIST AS (

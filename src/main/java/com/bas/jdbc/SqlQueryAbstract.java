@@ -21,6 +21,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.tomcat.util.collections.CaseInsensitiveKeyMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -31,6 +33,7 @@ import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
 
 public abstract class SqlQueryAbstract implements SqlQuery {
+    private final Logger logger = LoggerFactory.getLogger(getClass());
     protected ConnectionVo cv;
     protected String xmlFileName;
     protected Map<String, String> MAP_SQL = new HashMap<String, String>();
@@ -112,8 +115,7 @@ public abstract class SqlQueryAbstract implements SqlQuery {
 
     @Override
     public Map<String, Object> tableInfo(Map<String, Object> params) {
-        params.put("schema", Util.convertQueryParam((String)params.get("database")));
-        params.put("table", Util.convertQueryParam((String)params.get("table")));
+        defParam(params);
         params.put("table_name", Util.convertQueryParam((String)params.get("table1")));
         Map<String, Object> result = new HashMap<String,Object>();
         result.put("list", selectList("table_info", params));
@@ -123,11 +125,21 @@ public abstract class SqlQueryAbstract implements SqlQuery {
 
     @Override
     public Map<String, Object> tableList(Map<String, Object> params) {
-        params.put("schema", Util.convertQueryParam((String)params.get("database")));
-        params.put("table", Util.convertQueryParam((String)params.get("table")));
+        defParam(params);
+        
         Map<String, Object> result = new HashMap<String,Object>();
         result.put("list", selectList("table_list", params));
         return result;
+    }
+    
+    public void defParam(Map<String, Object> params) {
+        String database = Util.convertQueryParam(params.get("database"));
+        params.put("schema", database);
+        params.put("table", Util.convertQueryParam(params.get("table")));
+        if(!"".equals(database)) {
+            database += ".";
+        }
+        params.put("schema2", database);
     }
     
     @Override
@@ -146,7 +158,9 @@ public abstract class SqlQueryAbstract implements SqlQuery {
             con = cv.getConnection();
             String template = templateQeury(sqlId);
             String sql = freeMarkerQeury(template, params);
-            System.out.println("sql = " + sql);
+            if(logger.isInfoEnabled()) {
+                logger.info("\n/* template id : " + sqlId + "*/" + sql);
+            }
             ctmt = con.createStatement();
             rs = ctmt.executeQuery(sql);
             list = convertListMap(rs, 1000);
@@ -181,13 +195,16 @@ public abstract class SqlQueryAbstract implements SqlQuery {
         if(tableList.size() == 0) {
             tables = "''";
         }
-        String template = templateQeury("column_info");
+        String sqlId = "column_info";
+        String template = templateQeury(sqlId);
         Map<String, Object> params = new HashMap<>();
         params.put("tables", tables);
         params.put("cols", cols);
         params.put("pkTag", "N");
         String sql = freeMarkerQeury(template, params);
-//        System.out.println("sb.toString() = " + sql);
+        if(logger.isInfoEnabled()) {
+            logger.info("\n/* template id : " + sqlId + "*/" + sql);
+        }
         Statement ctmt = null;
         ResultSet rs = null;
         try {
