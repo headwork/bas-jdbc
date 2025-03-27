@@ -7,6 +7,7 @@
       FROM information_schema.table_constraints C
      INNER JOIN information_schema.KEY_COLUMN_USAGE K
         ON C.table_schema = K.table_schema AND C.TABLE_NAME = K.TABLE_NAME
+       AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME
      WHERE 1=1
 <#if (schema != '')>
        AND C.table_schema='${schema}'
